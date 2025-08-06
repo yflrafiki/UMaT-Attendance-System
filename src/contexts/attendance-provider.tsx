@@ -1,7 +1,7 @@
 "use client";
 
 import type { AttendanceData, AttendanceRecord, Course } from '@/lib/mock-data';
-import { initialAttendance } from '@/lib/mock-data';
+import { initialAttendance, student as defaultStudent } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
@@ -10,11 +10,19 @@ type AttendanceQueueItem = {
   record: AttendanceRecord;
 };
 
+type Student = {
+  id: string;
+  name: string;
+}
+
 type AttendanceContextType = {
   attendance: AttendanceData;
   markAttendance: (courseId: string, record: AttendanceRecord) => void;
   getCourseAttendance: (courseId: string) => { present: number; total: number; percentage: number };
   isOnline: boolean;
+  student: Student;
+  enrolledPhoto: string;
+  setEnrolledPhoto: (photoDataUri: string) => void;
 };
 
 const AttendanceContext = createContext<AttendanceContextType | undefined>(undefined);
@@ -24,12 +32,19 @@ const getLocalStorageItem = <T,>(key: string, fallback: T): T => {
     return fallback;
   }
   const item = window.localStorage.getItem(key);
-  return item ? JSON.parse(item) : fallback;
+  try {
+     return item ? JSON.parse(item) : fallback;
+  } catch (e) {
+    console.warn(`Error parsing localStorage item "${key}":`, e);
+    return fallback;
+  }
 };
 
 export const AttendanceProvider = ({ children }: { children: React.ReactNode }) => {
   const [attendance, setAttendance] = useState<AttendanceData>(() => getLocalStorageItem('attendanceData', initialAttendance));
   const [isOnline, setIsOnline] = useState(true);
+    const [student] = useState<Student>(defaultStudent);
+  const [enrolledPhoto, setEnrolledPhotoState] = useState<string>(() => getLocalStorageItem('enrolledPhoto', defaultStudent.enrolledPhotoDataUri));
   const { toast } = useToast();
 
   useEffect(() => {
@@ -83,6 +98,14 @@ export const AttendanceProvider = ({ children }: { children: React.ReactNode }) 
     }
   }, [attendance]);
 
+    const setEnrolledPhoto = (photoDataUri: string) => {
+    setEnrolledPhotoState(photoDataUri);
+     if (typeof window !== 'undefined') {
+      window.localStorage.setItem('enrolledPhoto', JSON.stringify(photoDataUri));
+    }
+  }
+
+
   const markAttendance = (courseId: string, record: AttendanceRecord) => {
     const update = (prev: AttendanceData): AttendanceData => {
       const newAttendance = { ...prev };
@@ -120,7 +143,7 @@ export const AttendanceProvider = ({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <AttendanceContext.Provider value={{ attendance, markAttendance, getCourseAttendance, isOnline }}>
+    <AttendanceContext.Provider value={{ attendance, markAttendance, getCourseAttendance, isOnline, student, enrolledPhoto, setEnrolledPhoto }}>
       {children}
     </AttendanceContext.Provider>
   );

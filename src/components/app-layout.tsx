@@ -17,15 +17,15 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Home, Camera, LogOut, ShieldCheck, Wifi, WifiOff } from 'lucide-react';
-import { student } from '@/lib/mock-data';
+import { Home, Camera, LogOut, ShieldCheck, Wifi, WifiOff, User } from 'lucide-react';
+// import { student } from '@/lib/mock-data';
 import { useAttendance } from '@/contexts/attendance-provider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isOnline } = useAttendance();
+  const { isOnline, student } = useAttendance();
 
   const handleLogout = () => {
     // In a real app, clear session/token here
@@ -60,6 +60,14 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
                 <Link href="/capture">
                   <Camera />
                   <span>Capture Attendance</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname === '/profile'}>
+                <Link href="/profile">
+                  <User />
+                  <span>My Profile</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>

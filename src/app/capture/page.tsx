@@ -10,7 +10,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Camera, Loader2, ShieldAlert, ShieldCheck, RefreshCcw, Send } from 'lucide-react';
 import { detectImpersonation, type DetectImpersonationOutput } from '@/ai/flows/detect-impersonation';
-import { courses, student } from '@/lib/mock-data';
+import { courses } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 import { useAttendance } from '@/contexts/attendance-provider';
 
@@ -24,7 +24,7 @@ export default function CapturePage() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { toast } = useToast();
-  const { markAttendance } = useAttendance();
+  const { markAttendance, enrolledPhoto } = useAttendance();
 
   useEffect(() => {
     const getCameraPermission = async () => {
@@ -93,11 +93,20 @@ export default function CapturePage() {
       return;
     }
 
+      if (!enrolledPhoto) {
+       toast({
+        variant: 'destructive',
+        title: 'No Enrollment Photo',
+        description: 'Please upload an enrollment photo on your profile page first.',
+      });
+      return;
+    }
+
     setIsLoading(true);
     try {
       const detectionResult = await detectImpersonation({
         livePhotoDataUri: capturedPhoto,
-        enrolledPhotoDataUri: student.enrolledPhotoDataUri,
+        enrolledPhotoDataUri: enrolledPhoto,
       });
       setResult(detectionResult);
     } catch (error) {
