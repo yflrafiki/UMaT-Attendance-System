@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Home, Camera, LogOut, ShieldCheck, Wifi, WifiOff, User } from 'lucide-react';
+import { Home, Camera, LogOut, ShieldCheck, Wifi, WifiOff, User, BookText, Briefcase } from 'lucide-react';
 // import { student } from '@/lib/mock-data';
 import { useAttendance } from '@/contexts/attendance-provider';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
@@ -31,6 +31,8 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
     // In a real app, clear session/token here
     router.push('/');
   };
+
+  const isLecturer = student.id.startsWith('LECTURER');
 
   return (
     <SidebarProvider>
@@ -47,30 +49,53 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/dashboard'}>
-                <Link href="/dashboard">
-                  <Home />
-                  <span>Dashboard</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/capture'}>
-                <Link href="/capture">
-                  <Camera />
-                  <span>Capture Attendance</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname === '/profile'}>
-                <Link href="/profile">
-                  <User />
-                  <span>My Profile</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+              {isLecturer ? (
+               <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/lecturer'}>
+                  <Link href="/lecturers">
+                    <Briefcase />
+                    <span>Dashboard</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ) : (
+              <>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/dashboard'}>
+                    <Link href="/lecturers">
+                      <Home />
+                      <span>Dashboard</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/capture'}>
+                    <Link href="/capture">
+                      <Camera />
+                      <span>Capture Attendance</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={pathname === '/history'}>
+                      <Link href="/history">
+                        <BookText />
+                        <span>Attendance History</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={pathname === '/profile'}>
+                    <Link href="/profile">
+                      <User />
+                      <span>My Profile</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </>
+            )}
+            
+           
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
