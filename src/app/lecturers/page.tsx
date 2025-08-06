@@ -12,7 +12,7 @@ import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAttendance } from '@/contexts/attendance-provider';
-import { courses } from '@/lib/mock-data';
+import { courses, mockStudentAttendance } from '@/lib/mock-data';
 import { Bot, Loader2 } from 'lucide-react';
 import { generateAttendanceReport } from '@/ai/flows/generate-attendance-report';
 import { useToast } from '@/hooks/use-toast';
@@ -88,7 +88,7 @@ export default function LecturerPage() {
         courseName,
         studentAttendance: studentCourseDetails
           .filter(s => s.total > 0) // Only include students with attendance records for the course
-          .map(s => ({ name: s.name, id: s.id, percentage: s.percentage, status: s.status})),
+          .map(s => ({ name: s.name, id: s.id, percentage: s.percentage, status: s.status as string })),
       });
       setReport(reportData.report);
     } catch(error) {

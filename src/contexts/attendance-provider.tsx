@@ -44,11 +44,12 @@ const getLocalStorageItem = <T,>(key: string, fallback: T): T => {
 };
 
 export const AttendanceProvider = ({ children }: { children: React.ReactNode }) => {
-    const [students, setStudents] = useState<Student[]>(() => getLocalStorageItem('allStudents', allStudents));
-  const [attendance, setAttendance] = useState<AttendanceData>(() => getLocalStorageItem('attendanceData', initialAttendance));
+  const [students, setStudents] = useState<Student[]>(allStudents);
+  const [attendance, setAttendance] = useState<AttendanceData>(initialAttendance);
   const [isOnline, setIsOnline] = useState(true);
-  const [student, setStudentState] = useState<Student>(() => getLocalStorageItem('student', defaultStudent));
-  const [enrolledPhoto, setEnrolledPhotoState] = useState<string>(() => getLocalStorageItem('enrolledPhoto', defaultStudent.enrolledPhotoDataUri));
+  const [student, setStudentState] = useState<Student>(defaultStudent);
+  const [enrolledPhoto, setEnrolledPhotoState] = useState<string>(defaultStudent.enrolledPhotoDataUri);
+  const [isMounted, setIsMounted] = useState(false);
   const { toast } = useToast();
 
   // useEffect(() => {
@@ -64,6 +65,18 @@ export const AttendanceProvider = ({ children }: { children: React.ReactNode }) 
   //     };
   //   }
   // }, []);
+
+  useEffect(() => {
+    setIsMounted(true);
+    setStudents(getLocalStorageItem('allStudents', allStudents));
+    const storedStudent = getLocalStorageItem('student', defaultStudent);
+    setStudentState(storedStudent);
+    setEnrolledPhotoState(getLocalStorageItem('enrolledPhoto', storedStudent.enrolledPhotoDataUri));
+
+    // Load correct attendance data based on the stored student
+     const studentMockData = mockStudentAttendance[storedStudent.id] || getLocalStorageItem(`attendanceData_${storedStudent.id}`, {});
+    setAttendance(studentMockData);
+  }, []);
 
   const processQueue = useCallback(() => {
     const queue = getLocalStorageItem<AttendanceQueueItem[]>('attendanceQueue', []);
@@ -121,11 +134,11 @@ export const AttendanceProvider = ({ children }: { children: React.ReactNode }) 
   }, [processQueue, toast]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && isMounted) {
        window.localStorage.setItem(`attendanceData_${student.id}`, JSON.stringify(attendance));
       window.localStorage.setItem('allStudents', JSON.stringify(students));
     }
-  }, [attendance, student.id, students]);
+  }, [attendance, student.id, students, isMounted]);
 
     const setStudent = (newStudent: Student) => {
     setStudentState(newStudent);
@@ -210,8 +223,20 @@ export const AttendanceProvider = ({ children }: { children: React.ReactNode }) 
     return allData;
   }
 
+  const value = { attendance, markAttendance, getCourseAttendance, isOnline, student, setStudent, enrolledPhoto, setEnrolledPhoto, getAllStudentAttendance };
+
+  // Render a loading state or default view until the component has mounted on the client
+  if (!isMounted) {
+    // This can be a loading spinner or a simplified version of the layout
+    return (
+       <AttendanceContext.Provider value={value}>
+        {children}
+      </AttendanceContext.Provider>
+    );
+  }
+
   return (
-    <AttendanceContext.Provider value={{ attendance, markAttendance, getCourseAttendance, isOnline, student, setStudent, enrolledPhoto, setEnrolledPhoto, getAllStudentAttendance }}>
+    <AttendanceContext.Provider value={value}>
       {children}
     </AttendanceContext.Provider>
   );
