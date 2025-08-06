@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { AppLayout } from '@/components/app-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -9,22 +9,43 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { useAttendance } from '@/contexts/attendance-provider';
 import { courses } from '@/lib/mock-data';
+import { Bot, Loader2 } from 'lucide-react';
+import { generateAttendanceReport } from '@/ai/flows/generate-attendance-report';
+import { useToast } from '@/hooks/use-toast';
 
 export default function LecturerPage() {
   const { getAllStudentAttendance } = useAttendance();
   const [selectedCourse, setSelectedCourse] = useState<string>(courses[0]?.id || '');
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+  const [report, setReport] = useState('');
   const allStudentData = useMemo(() => getAllStudentAttendance(), [getAllStudentAttendance]);
+  const { toast } = useToast();
 
   const courseStats = useMemo(() => {
     let totalPresent = 0;
     let totalClasses = 0;
+    let enrolledStudents = 0;
 
-    allStudentData.forEach(({ attendance }) => {
-      const courseRecords = attendance[selectedCourse] || [];
-      totalPresent += courseRecords.filter(r => r.status === 'present').length;
-      totalClasses += courseRecords.length;
+   allStudentData.forEach(({ student, attendance }) => {
+       const courseRecords = attendance[selectedCourse] || [];
+       // Only count students who are "enrolled" in the course (have records)
+      if (courseRecords.length > 0) {
+        enrolledStudents++;
+        totalPresent += courseRecords.filter(r => r.status === 'present').length;
+        totalClasses += courseRecords.length;
+      } else if (mockStudentAttendance[student.id] && mockStudentAttendance[student.id][selectedCourse]) {
+        // Fallback for mock data if live records are empty
+        const mockRecords = mockStudentAttendance[student.id][selectedCourse];
+        if (mockRecords) {
+           enrolledStudents++;
+           totalPresent += mockRecords.filter(r => r.status === 'present').length;
+           totalClasses += mockRecords.length;
+        }
+      }
     });
 
     const percentage = totalClasses > 0 ? (totalPresent / totalClasses) * 100 : 0;
@@ -58,6 +79,29 @@ export default function LecturerPage() {
     }).sort((a,b) => a.percentage - b.percentage);
   }, [allStudentData, selectedCourse]);
   
+  const handleGenerateReport = async () => {
+    setIsGeneratingReport(true);
+    setReport('');
+    try {
+      const courseName = courses.find(c => c.id === selectedCourse)?.name || 'the course';
+      const reportData = await generateAttendanceReport({
+        courseName,
+        studentAttendance: studentCourseDetails
+          .filter(s => s.total > 0) // Only include students with attendance records for the course
+          .map(s => ({ name: s.name, id: s.id, percentage: s.percentage, status: s.status})),
+      });
+      setReport(reportData.report);
+    } catch(error) {
+      console.error("Failed to generate report:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Report Generation Failed',
+        description: 'Could not generate the AI report. Please try again.',
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
+  }
 
   return (
     <AppLayout>
@@ -75,7 +119,7 @@ export default function LecturerPage() {
                         <CardDescription>Select a course to view its statistics.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <Select onValueChange={setSelectedCourse} value={selectedCourse}>
+                        <Select onValueChange={(value) => { setSelectedCourse(value); setReport(''); }} value={selectedCourse}>
                             <SelectTrigger>
                             <SelectValue placeholder="Select a course..." />
                             </SelectTrigger>
@@ -94,9 +138,23 @@ export default function LecturerPage() {
                             </div>
                             <Progress value={courseStats.percentage} className="h-2" />
                              <div className="flex justify-between pt-2">
-                                <span className="text-muted-foreground">Enrolled Students</span>
+                                <span className="text-muted-foreground">Total Students</span>
                                 <span className="font-bold">{courseStats.students}</span>
                             </div>
+                        </div>
+                          <div className="space-y-2">
+                           <Button className="w-full" onClick={handleGenerateReport} disabled={isGeneratingReport}>
+                            {isGeneratingReport ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Bot className="mr-2 h-4 w-4" />}
+                            {isGeneratingReport ? 'Analyzing...' : 'Generate AI Report'}
+                           </Button>
+                           {report && (
+                              <Textarea
+                                readOnly
+                                value={report}
+                                className="h-32 text-sm bg-muted/50"
+                                placeholder="AI Report will appear here..."
+                                />
+                           )}
                         </div>
                     </CardContent>
                 </Card>

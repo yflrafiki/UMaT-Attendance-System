@@ -19,7 +19,7 @@ export type Student = {
   enrolledPhotoDataUri: string;
 }
 
-export const students: Student[] = [
+export let students: Student[] = [
     {
     id: 'UMAT2024001',
     name: 'Kofi Mensah',

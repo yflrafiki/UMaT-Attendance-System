@@ -1,7 +1,7 @@
 "use client";
 
 import type { AttendanceData, AttendanceRecord, Course, Student } from '@/lib/mock-data';
-import { initialAttendance, students, student as defaultStudent, mockStudentAttendance } from '@/lib/mock-data';
+import { initialAttendance, students as allStudents, student as defaultStudent, mockStudentAttendance } from '@/lib/mock-data';
 import { useToast } from '@/hooks/use-toast';
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 
@@ -44,6 +44,7 @@ const getLocalStorageItem = <T,>(key: string, fallback: T): T => {
 };
 
 export const AttendanceProvider = ({ children }: { children: React.ReactNode }) => {
+    const [students, setStudents] = useState<Student[]>(() => getLocalStorageItem('allStudents', allStudents));
   const [attendance, setAttendance] = useState<AttendanceData>(() => getLocalStorageItem('attendanceData', initialAttendance));
   const [isOnline, setIsOnline] = useState(true);
   const [student, setStudentState] = useState<Student>(() => getLocalStorageItem('student', defaultStudent));
@@ -121,21 +122,24 @@ export const AttendanceProvider = ({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      window.localStorage.setItem('attendanceData', JSON.stringify(attendance));
+       window.localStorage.setItem(`attendanceData_${student.id}`, JSON.stringify(attendance));
+      window.localStorage.setItem('allStudents', JSON.stringify(students));
     }
-  }, [attendance]);
+  }, [attendance, student.id, students]);
 
     const setStudent = (newStudent: Student) => {
     setStudentState(newStudent);
     if(typeof window !== 'undefined'){
       window.localStorage.setItem('student', JSON.stringify(newStudent));
-      // For demo purposes, if this student has mock data, load it.
-      const studentMockData = mockStudentAttendance[newStudent.id];
-      if (studentMockData) {
-        setAttendance(studentMockData);
-      } else {
-        setAttendance(getLocalStorageItem(`attendanceData_${newStudent.id}`, {}));
+        // If a new student signs up, add them to the list of all students
+      if (!newStudent.id.startsWith('LECTURER') && !students.some(s => s.id === newStudent.id)) {
+        const updatedStudents = [...students, newStudent];
+        setStudents(updatedStudents);
+        // Also initialize their attendance data in mock data for demo purposes
+        mockStudentAttendance[newStudent.id] = {};
       }
+       const studentMockData = mockStudentAttendance[newStudent.id] || getLocalStorageItem(`attendanceData_${newStudent.id}`, {});
+      setAttendance(studentMockData);
     }
   }
 
@@ -201,7 +205,7 @@ export const AttendanceProvider = ({ children }: { children: React.ReactNode }) 
         return { student: s, attendance: attendance };
       }
       // Other students use the mock data.
-      return { student: s, attendance: mockStudentAttendance[s.id] || {} };
+      return { student: s, attendance: mockStudentAttendance[s.id] || getLocalStorageItem(`attendanceData_${s.id}`, {}) };
     });
     return allData;
   }
